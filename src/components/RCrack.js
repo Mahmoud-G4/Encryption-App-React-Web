@@ -1,7 +1,10 @@
 import React, { useState } from "react";
-import "../styles/Rail.css";
+import { useNavigate } from "react-router-dom";
 
-export default function RailFenceCracker({ history }) {
+import "../styles/Rail.css";
+export default function RailFenceCracker() {
+  const navigate = useNavigate(); // Initialize navigation
+
   const [ciphertext, setCiphertext] = useState("");
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +75,7 @@ export default function RailFenceCracker({ history }) {
         CRACK CIPHER
       </button>
 
-      <button className="back-button" onClick={() => history.goBack()} disabled={isLoading}>
+      <button className="back-button" onClick={() => navigate(-1)}>
         BACK TO ENCRYPTION
       </button>
 
