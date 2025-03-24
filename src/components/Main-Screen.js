@@ -1,9 +1,11 @@
 // MainScreen.js
 import React, { useState } from "react";
-import "./assets/styles/Main-Screen.css";
-import logo from "./assets/images/logo.png"; 
+import "../styles/Main-Screen.css";
+import logo from "../images/logo.png"; 
+import { useNavigate } from "react-router-dom";
 
-export default function MainScreen({ navigate }) {
+export default function MainScreen() {
+  const navigate = useNavigate(); // Get the navigation function
   const [text, setText] = useState("");
   const [caesarKey, setCaesarKey] = useState("3");
   const [vigenereKey, setVigenereKey] = useState("KEY");

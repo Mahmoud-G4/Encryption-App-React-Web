@@ -1,9 +1,9 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import MainScreen from "./assets/components/Main-Screen";
-import CCracker from "./assets/components/CCrack";
-import RFCracker from "./assets/components/RCrack";
-import VCracker from "./assets/components/VCrack";
+import MainScreen from "./components/Main-Screen";
+import CCracker from "./components/CCrack";
+import RFCracker from "./components/RCrack";
+import VCracker from "./components/VCrack";
 
 export default function App() {
   return (
