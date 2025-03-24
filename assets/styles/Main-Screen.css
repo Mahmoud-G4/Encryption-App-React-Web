@@ -1,0 +1,101 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #121212;
+  }
+  
+  .scroll-container {
+    padding: 20px;
+    padding-bottom: 40px;
+  }
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .logo {
+    width: 200px;
+    height: 40px;
+  }
+  
+  .subtitle {
+    font-size: 16px;
+    text-align: center;
+    color: #bb86fc;
+    margin-bottom: 30px;
+    letter-spacing: 1px;
+  }
+  
+  .card {
+    background-color: #1e1e1e;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #e0e0e0;
+  }
+  
+  .label {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #e0e0e0;
+    font-weight: bold;
+  }
+  
+  .text-input {
+    background-color: #2c2c2c;
+    border-radius: 12px;
+    padding: 15px;
+    min-height: 120px;
+    text-align: start;
+    color: #ffffff;
+    border: 1px solid #3a3a3a;
+  }
+  
+  .button {
+    background-color: #bb86fc;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    color: #121212;
+    font-weight: bold;
+    font-size: 16px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0px 2px 4px rgba(187, 134, 252, 0.3);
+  }
+  
+  .hello-button {
+    background-color: #2196f3; /* Different color for the hello button */
+  }
+  
+  .results-container {
+    background-color: #1e1e1e;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .result-box {
+    margin-bottom: 15px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #2c2c2c;
+  }
+  
+  .result-text {
+    font-size: 14px;
+    color: #e0e0e0;
+    font-family: monospace;
+  }
+  

@@ -1,0 +1,22 @@
+{
+  "name": "encryption",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "latest",
+    "@react-navigation/native": "^7.0.17",
+    "@react-navigation/stack": "^7.2.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2"
+  }
+}
