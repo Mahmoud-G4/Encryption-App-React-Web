@@ -1,7 +1,7 @@
 // MainScreen.js
 import React, { useState } from "react";
 import "../styles/Main-Screen.css";
-import logo from "../images/logo.png"; 
+import logo from "../images/logo1.png";
 import { useNavigate } from "react-router-dom";
 
 export default function MainScreen() {
@@ -127,85 +127,98 @@ export default function MainScreen() {
   };
 
   return (
-    <div className="container">
-      <div className="logo-container">
-        <img src={logo} alt="Logo" className="logo" />
+    <div className="main-screen">
+      <div className="main-screen__logo-container">
+        <img src={logo} alt="Logo" className="main-screen__logo" />
       </div>
       <h2>Encryption Tool</h2>
 
-      <div className="card">
-        <label>Enter Text</label>
+      <div className="main-screen__card">
+        <label className="main-screen__label">Enter Text</label>
         <textarea
-          className="text-input"
+          className="main-screen__text-input"
           placeholder="Type your message here..."
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
       </div>
 
-      <div className="card">
+      <div className="main-screen__card">
         <h3>Encryption Keys</h3>
 
-        <div className="key-input-group">
+        <div className="main-screen__key-input-group">
           <label>Caesar Shift</label>
           <input
             type="number"
-            className="key-input"
+            className="main-screen__key-input"
             value={caesarKey}
             onChange={(e) => setCaesarKey(e.target.value)}
           />
         </div>
 
-        <div className="key-input-group">
+        <div className="main-screen__key-input-group">
           <label>Vigenère Key</label>
           <input
             type="text"
-            className="key-input"
+            className="main-screen__key-input"
             value={vigenereKey}
             onChange={(e) => setVigenereKey(e.target.value)}
           />
         </div>
 
-        <div className="key-input-group">
+        <div className="main-screen__key-input-group">
           <label>Rail Fence Rails</label>
           <input
             type="number"
-            className="key-input"
+            className="main-screen__key-input"
             value={railFenceKey}
             onChange={(e) => setRailFenceKey(e.target.value)}
           />
         </div>
       </div>
 
-      <button className="button" onClick={encryptText}>ENCRYPT</button>
+      <button className="main-screen__button" onClick={encryptText}>
+        ENCRYPT
+      </button>
 
-      <button className="button" onClick={() => navigate("CCracker")}>
+      <button
+        className="main-screen__button"
+        onClick={() => navigate("CCracker")}
+      >
         Caesar Cracker
       </button>
-      <button className="button" onClick={() => navigate("VCracker")}>
+
+      <button
+        className="main-screen__button"
+        onClick={() => navigate("VCracker")}
+      >
         Vigenère Cracker
       </button>
-      <button className="button" onClick={() => navigate("RFCracker")}>
+
+      <button
+        className="main-screen__button"
+        onClick={() => navigate("RFCracker")}
+      >
         Rail Fence Cracker
       </button>
 
       {results.caesar || results.vigenere || results.railFence ? (
-        <div className="results-container">
+        <div className="main-screen__results-container">
           <h3>Encryption Results</h3>
 
-          <div className="result-box">
+          <div className="main-screen__result-box">
             <h4>Caesar Cipher</h4>
-            <p className="result-text">{results.caesar}</p>
+            <p className="main-screen__result-text">{results.caesar}</p>
           </div>
 
-          <div className="result-box">
+          <div className="main-screen__result-box">
             <h4>Vigenère Cipher</h4>
-            <p className="result-text">{results.vigenere}</p>
+            <p className="main-screen__result-text">{results.vigenere}</p>
           </div>
 
-          <div className="result-box">
+          <div className="main-screen__result-box">
             <h4>Rail Fence Cipher</h4>
-            <p className="result-text">{results.railFence}</p>
+            <p className="main-screen__result-text">{results.railFence}</p>
           </div>
         </div>
       ) : null}
