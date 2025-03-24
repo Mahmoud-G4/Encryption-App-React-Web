@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "../styles/Rail.module.css";
 
-import "../styles/Rail.css";
 export default function RailFenceCracker() {
   const navigate = useNavigate(); // Initialize navigation
-
   const [ciphertext, setCiphertext] = useState("");
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,12 +34,12 @@ export default function RailFenceCracker() {
     row = 0;
     col = 0;
     dirDown = false;
-
     for (let i = 0; i < n; i++) {
       if (row === 0 || row === key - 1) dirDown = !dirDown;
       result += rail[row][col++];
       row += dirDown ? 1 : -1;
     }
+
     return result;
   };
 
@@ -57,21 +56,22 @@ export default function RailFenceCracker() {
   };
 
   return (
-    <div className="container">
-      <h2>Rail Fence Cipher Cracker</h2>
+    <div className="rail-fence-container">
+      <h2 className="header-name">Rail Fence Cipher Cracker</h2>
 
-      <div className="card">
-        <label>Enter Ciphertext</label>
+      <div className="input-group">
+        <label htmlFor="ciphertext">Enter Ciphertext</label>
         <textarea
-          className="text-input"
-          rows="4"
-          placeholder="Enter the encrypted text here..."
+          id="ciphertext"
           value={ciphertext}
           onChange={(e) => setCiphertext(e.target.value)}
         />
       </div>
 
-      <button onClick={bruteForceDecrypt} disabled={isLoading || !ciphertext.trim()}>
+      <button
+        onClick={bruteForceDecrypt}
+        disabled={isLoading || !ciphertext.trim()}
+      >
         CRACK CIPHER
       </button>
 
