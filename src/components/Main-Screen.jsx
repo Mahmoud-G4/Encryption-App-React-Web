@@ -84,15 +84,15 @@ export default function MainScreen() {
 
     // Create the rail fence pattern
     const fence = Array(rails)
-      .fill()
-      .map(() => Array(str.length).fill(""));
+      .fill(null)
+      .map(() => Array(str.length).fill(null)); // Use `null` instead of ""
 
     let rail = 0;
     let direction = 1; // 1 for down, -1 for up
 
     // Fill the fence pattern
     for (let i = 0; i < str.length; i++) {
-      fence[rail][i] = str[i];
+      fence[rail][i] = str[i]; // Place every character, including spaces
 
       if (rail === 0) {
         direction = 1;
@@ -107,7 +107,8 @@ export default function MainScreen() {
     let result = "";
     for (let i = 0; i < rails; i++) {
       for (let j = 0; j < str.length; j++) {
-        if (fence[i][j] !== "") {
+        if (fence[i][j] !== null) {
+          // Preserve spaces and other characters
           result += fence[i][j];
         }
       }

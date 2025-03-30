@@ -109,7 +109,7 @@ export default function RailFenceCracker() {
         const possibleResults = [];
 
         // Try different key sizes (minimum 2, maximum 10 or half the text length)
-        for (let key = 2; key <= Math.min(ciphertext.length / 2, 20); key++) {
+        for (let key = 2; key <= Math.min(ciphertext.length, 20); key++) {
           const decrypted = decryptRailFence(ciphertext, key);
           const score = scoreEnglishText(decrypted);
 
@@ -156,10 +156,6 @@ export default function RailFenceCracker() {
         disabled={isLoading || !ciphertext.trim()}
       >
         CRACK CIPHER
-      </button>
-
-      <button className="back-button" onClick={() => navigate(-1)}>
-        BACK TO ENCRYPTION
       </button>
 
       {isLoading && <p>Analyzing cipher text...</p>}
