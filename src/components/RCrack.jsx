@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "../styles/Rail.module.css";
+import styles from "../styles/Rail.module.css";
 
 export default function RailFenceCracker() {
   const [ciphertext, setCiphertext] = useState("");
@@ -138,11 +137,12 @@ export default function RailFenceCracker() {
       }
     }, 100);
   };
-  return (
-    <div className="rail-fence-container">
-      <h2 className="header-name">Rail Fence Cipher Cracker</h2>
 
-      <div className="input-group">
+  return (
+    <div className={styles["rail-fence-container"]}>
+      <h2>Rail Fence Cipher Cracker</h2>
+
+      <div className={styles["input-group"]}>
         <label htmlFor="ciphertext">Enter Ciphertext</label>
         <textarea
           id="ciphertext"
@@ -155,13 +155,13 @@ export default function RailFenceCracker() {
         onClick={bruteForceDecrypt}
         disabled={isLoading || !ciphertext.trim()}
       >
-        CRACK CIPHER
+        {isLoading ? "ANALYZING..." : "CRACK CIPHER"}
       </button>
 
       {isLoading && <p>Analyzing cipher text...</p>}
 
       {results.length > 0 && (
-        <div className="results-container">
+        <div className={styles["results-container"]}>
           <h3>Possible Decryptions</h3>
           {results.map((result, index) => (
             <p key={index}>

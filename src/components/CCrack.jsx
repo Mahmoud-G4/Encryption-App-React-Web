@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "../styles/Caesar.module.css"; // Import CSS module correctly
+import styles from "../styles/Caesar.module.css";
 
 const ENGLISH_FREQUENCIES = {
   E: 0.1202,
@@ -29,6 +29,7 @@ const ENGLISH_FREQUENCIES = {
   J: 0.001,
   Z: 0.0007,
 };
+
 export default function CCracker() {
   const [ciphertext, setCiphertext] = useState("");
   const [key, setKey] = useState("3");
@@ -184,7 +185,7 @@ export default function CCracker() {
         onChange={(e) => setCiphertext(e.target.value)}
       />
 
-      <div className={styles.optionRo}>
+      <div className={styles.optionRow}>
         <label className={styles.label}>
           Use Specific Key:
           <input

@@ -1,5 +1,10 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router";
+import "./styles/Vegenire.module.css";
+import "./styles/Main-Screen.css";
+import "./styles/Caesar.module.css"; // Import CSS module correctly
+import "./styles/Rail.module.css";
+
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainScreen from "./components/Main-Screen.jsx";
 import CCracker from "./components/CCrack.jsx";
 import RFCracker from "./components/RCrack.jsx";
