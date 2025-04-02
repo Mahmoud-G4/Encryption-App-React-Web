@@ -5,6 +5,9 @@ Shifting : $${\color{lightblue}Ceasar Cipher}$$ </br>
 Key : $${\color{lightblue}Vigenere Cipher}$$ </br>
 Rails :  $${\color{lightblue}Rail Fence}$$ </br>
 
+ <b>Mobile app version:</b>
+ (https://github.com/AmrKhamis1/Encryption_App)
+ 
 > [!NOTE]
 > Decryption Algorithm Used : Brute Force </br>
 
@@ -27,8 +30,7 @@ Rails :  $${\color{lightblue}Rail Fence}$$ </br>
 
 ![Figure_1](https://github.com/user-attachments/assets/401cf498-9558-4cde-862e-a16e344e5b28)
  </br> </br> 
- <b>Mobile app version:</b>
- (https://github.com/AmrKhamis1/Encryption_App)
+
  </br>
 Run : </br>
 ```npx expo start ```
