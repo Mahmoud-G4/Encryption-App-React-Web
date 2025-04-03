@@ -36,9 +36,9 @@ Key Refinement </br>
     🔵 Blue Areas → High accuracy (easy to decrypt cases).
 
     ⚪ White Areas → Transition zones.
+![Figure_1](https://github.com/user-attachments/assets/c544b696-6e8c-4d05-8492-15620e39bbf8)
 
 
-![Figure_1](https://github.com/user-attachments/assets/401cf498-9558-4cde-862e-a16e344e5b28)
  </br> </br> </br>
 Run : </br>
 ```npx expo start ```
