@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vigenère Cipher Cracking Visualization</title>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --background-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --highlight-color: #ffb703;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            margin: 25px 0 15px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            margin: 20px 0 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            list-style: none;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .nav-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+            background-color: #e9ecef;
+        }
+
+        .nav-item.active {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            border-bottom: 2px solid white;
+            margin-bottom: -2px;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .visualization-container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 400px;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .code-block {
+            background-color: #f1f3f5;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Consolas', 'Courier New', Courier, monospace;
+            white-space: pre;
+            overflow-x: auto;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .flex-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .flex-item {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group input, 
+        .input-group textarea,
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #e9ecef;
+        }
+
+        .highlighted {
+            background-color: var(--highlight-color);
+        }
+
+        .note {
+            background-color: #e9f5ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 10px 15px;
+            margin: 15px 0;
+        }
+
+        .formula {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background-color: #e9ecef;
+            border: 1px solid var(--border-color);
+            border-right: none;
+        }
+
+        .step:last-child {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .step.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        #letterFrequencyChart, #icChart, #chiSquaredChart {
+            width: 100%;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        .heatmap {
+            display: grid;
+            grid-template-columns: repeat(26, 1fr);
+            gap: 2px;
+            margin: 20px 0;
+        }
+
+        .heatmap-cell {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .animation-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .flex-container {
+                flex-direction: column;
+            }
+            
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .nav-item {
+                flex-grow: 1;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Vigenère Cipher Cracking Visualization</h1>
+            <p>A step-by-step visualization of algorithms used to crack Vigenère ciphers</p>
+        </header>
+
+        <ul class="nav-tabs">
+            <li class="nav-item active" data-tab="overview">Overview</li>
+            <li class="nav-item" data-tab="ic-method">Index of Coincidence</li>
+            <li class="nav-item" data-tab="freq-analysis">Frequency Analysis</li>
+            <li class="nav-item" data-tab="key-refinement">Key Refinement</li>
+        </ul>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="card">
+                <h2>The Vigenère Cipher</h2>
+                <p>The Vigenère cipher is a method of encrypting alphabetic text by using a simple form of polyalphabetic substitution. It uses a keyword to shift each letter of the plaintext by different amounts.</p>
+                
+                <h3>How the Vigenère Cipher Works</h3>
+                <div class="flex-container">
+                    <div class="flex-item">
+                        <p>In a Vigenère cipher:</p>
+                        <ol>
+                            <li>A keyword is repeated to match the length of the plaintext</li>
+                            <li>Each letter of the keyword indicates how much to shift the corresponding plaintext letter</li>
+                            <li>For encryption: <code>(plaintext_char + key_char) mod 26</code></li>
+                            <li>For decryption: <code>(ciphertext_char - key_char + 26) mod 26</code></li>
+                        </ol>
+                        
+                        <div class="formula">
+                            Encryption: C<sub>i</sub> = (P<sub>i</sub> + K<sub>i mod m</sub>) mod 26<br>
+                            Decryption: P<sub>i</sub> = (C<sub>i</sub> - K<sub>i mod m</sub> + 26) mod 26
+                        </div>
+                        
+                        <p>Where:</p>
+                        <ul>
+                            <li>C<sub>i</sub> is the i-th letter of the ciphertext</li>
+                            <li>P<sub>i</sub> is the i-th letter of the plaintext</li>
+                            <li>K<sub>i mod m</sub> is the i mod m letter of the key (cycling through the key)</li>
+                        </ul>
+                    </div>
+                    <div class="flex-item">
+                        <canvas id="vigenereTable" width="500" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Cracking Process Overview</h2>
+                <div class="step-indicator">
+                    <div class="step active">1. Determine Key Length</div>
+                    <div class="step">2. Find Each Key Letter</div>
+                    <div class="step">3. Refine the Key</div>
+                    <div class="step">4. Decrypt the Message</div>
+                </div>
+                
+                <p>Breaking a Vigenère cipher involves several key steps:</p>
+                
+                <h3>1. Determine the Key Length</h3>
+                <p>Using the Index of Coincidence (IC) method, we analyze how likely it is that randomly selected letters match in the text. In English, this value is approximately 0.067.</p>
+                <ul>
+                    <li>We try different key lengths and see which produces sequences with IC values closest to English text</li>
+                    <li>This helps narrow down the possible key length to a small set of candidates</li>
+                </ul>
+                
+                <h3>2. Find Each Letter of the Key</h3>
+                <p>For each position in the key, we:</p>
+                <ul>
+                    <li>Collect all ciphertext letters that were encrypted with the same key letter</li>
+                    <li>Perform frequency analysis on these sets</li>
+                    <li>Compare to English letter frequencies using Chi-squared test</li>
+                    <li>Determine the most likely shift value for each position</li>
+                </ul>
+                
+                <h3>3. Refine the Key</h3>
+                <p>We generate potential keys and test them by:</p>
+                <ul>
+                    <li>Decrypting the text with each key</li>
+                    <li>Counting recognized English words in the result</li>
+                    <li>Iteratively improving promising keys by testing variations</li>
+                </ul>
+                
+                <h3>4. Final Decryption</h3>
+                <p>Once we have a high-confidence key, we decrypt the entire message and evaluate the result based on word recognition percentage.</p>
+            </div>
+        </div>
+
+        <!-- Index of Coincidence Tab -->
+        <div id="ic-method" class="tab-content">
+            <div class="card">
+                <h2>Index of Coincidence (IC) Method</h2>
+                <p>The Index of Coincidence is a statistical measure used to determine the likelihood that two randomly selected letters in a text are the same.</p>
+                
+                <div class="flex-container">
+                    <div class="flex-item">
+                        <h3>Mathematical Foundation</h3>
+                        <p>For a text of length n with frequency counts f<sub>i</sub> for each letter:</p>
+                        
+                        <div class="formula">
+                            IC = Σ(f<sub>i</sub> × (f<sub>i</sub> - 1)) / (n × (n - 1))
+                        </div>
+                        
+                        <p>English text typically has an IC of approximately 0.067, while random text has an IC of about 0.038 (1/26).</p>
+                        
+                        <div class="note">
+                            <strong>Why this works:</strong> The Vigenère cipher uses multiple Caesar ciphers. If we group ciphertext letters that were encrypted with the same key letter, they should have frequency characteristics similar to a single substitution cipher (higher IC). Incorrect key lengths will produce more random-like distributions (lower IC).
+                        </div>
+                    </div>
+                    <div class="flex-item">
+                        <canvas id="icVisualization" width="450" height="250"></canvas>
+                    </div>
+                </div>
+                
+                <h3>Implementation in Code</h3>
+                <div class="code-block">
+// Calculate Index of Coincidence (helps determine key length)
+const calculateIC = (text) => {
+    const cleanText = text.toUpperCase().replace(/[^A-Z]/g, "");
+    const frequencies = {};
+    const length = cleanText.length;
+
+    // Count each letter
+    for (let i = 0; i < length; i++) {
+        frequencies[cleanText[i]] = (frequencies[cleanText[i]] || 0) + 1;
+    }
+
+    // Calculate IC value
+    let sum = 0;
+    for (const letter in frequencies) {
+        const count = frequencies[letter];
+        sum += count * (count - 1);
+    }
+
+    if (length <= 1) return 0;
+    return sum / (length * (length - 1));
+};</div>
+                
+                <h3>Finding the Key Length</h3>
+                <p>The algorithm tests different key lengths by:</p>
+                <ol>
+                    <li>Splitting the ciphertext into separate sequences based on each potential key length</li>
+                    <li>Calculating the IC for each sequence</li>
+                    <li>Finding the average IC across all sequences for that key length</li>
+                    <li>Key lengths that produce IC values closer to English text (0.067) are more likely to be correct</li>
+                </ol>
+                
+                <div class="code-block">
+// Split text into sequences based on key length
+const getSequences = (text, keyLength) => {
+    // Create array to hold each sequence
+    const sequences = Array(keyLength).fill().map(() => "");
+    let j = 0;
+
+    // Distribute letters to sequences
+    for (let i = 0; i < text.length; i++) {
+        if (/[A-Z]/i.test(text[i])) {
+            const position = j % keyLength;
+            sequences[position] += text[i];
+            j++;
+        }
+    }
+
+    return sequences;
+};</div>
+                
+                <div class="visualization-container">
+                    <h3>IC Visualization by Key Length</h3>
+                    <p>This chart shows how IC values change for different key lengths. Peaks closer to the English IC value (0.067) suggest likely key lengths.</p>
+                    <div id="icChart"></div>
+                    <div id="sequencesVisualization"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Frequency Analysis Tab -->
+        <div id="freq-analysis" class="tab-content">
+            <div class="card">
+                <h2>Frequency Analysis</h2>
+                <p>Once the key length is determined, we can analyze each "column" of characters that were encrypted with the same key letter.</p>
+                
+                <h3>English Letter Frequencies</h3>
+                <div class="flex-container">
+                    <div class="flex-item">
+                        <p>Letter frequencies in English text (from most to least common):</p>
+                        <div id="letterFrequencyChart"></div>
+                    </div>
+                    <div class="flex-item">
+                        <div class="code-block">
+// English letter frequencies (most common to least common)
+const ENGLISH_FREQUENCIES = {
+    E: 0.1202, T: 0.091, A: 0.0812, O: 0.0768, 
+    I: 0.0731, N: 0.0695, S: 0.0628, R: 0.0602, 
+    H: 0.0592, D: 0.0432, L: 0.0398, U: 0.0288, 
+    C: 0.0271, M: 0.0261, F: 0.023, Y: 0.0211, 
+    W: 0.0209, G: 0.0203, P: 0.0182, B: 0.0149, 
+    V: 0.0111, K: 0.0069, X: 0.0017, Q: 0.0011, 
+    J: 0.001, Z: 0.0007
+};</div>
+                    </div>
+                </div>
+                
+                <h3>Chi-Squared Test</h3>
+                <p>The Chi-squared test measures how well observed frequencies match expected frequencies. In our case, it helps determine which shift produces letter distributions closest to English.</p>
+                
+                <div class="formula">
+                    χ² = Σ (O<sub>i</sub> - E<sub>i</sub>)² / E<sub>i</sub>
+                </div>
+                
+                <p>Where:</p>
+                <ul>
+                    <li>O<sub>i</sub> is the observed frequency of letter i in our text</li>
+                    <li>E<sub>i</sub> is the expected frequency based on English language</li>
+                </ul>
+                
+                <div class="note">
+                    <strong>Lower Chi-squared values</strong> indicate better matches to English letter frequencies.
+                </div>
+                
+                <div class="code-block">
+// Compare letter frequencies to English using Chi-squared test
+const calculateChiSquared = (frequencies) => {
+    let chiSquared = 0;
+    for (let i = 0; i < 26; i++) {
+        const letter = String.fromCharCode(65 + i);
+        const observed = frequencies[letter] || 0;
+        const expected = ENGLISH_FREQUENCIES[letter] || 0;
+        if (expected > 0) {
+            chiSquared += Math.pow(observed - expected, 2) / expected;
+        }
+    }
+    return chiSquared; // Lower is better (more like English)
+};</div>
+                
+                <h3>Finding the Shift Value for Each Key Position</h3>
+                <p>For each position in the key:</p>
+                <ol>
+                    <li>Extract the corresponding sequence of ciphertext letters</li>
+                    <li>Try all 26 possible shifts</li>
+                    <li>Measure how closely each shifted sequence matches English letter frequencies</li>
+                    <li>Select the shift that produces the lowest Chi-squared value</li>
+                </ol>
+                
+                <div class="code-block">
+// Find possible shifts for each sequence
+const findBestShifts = (sequence, numOptions = 5) => {
+    const results = [];
+
+    // Try all 26 possible shifts
+    for (let shift = 0; shift < 26; shift++) {
+        let decrypted = "";
+        // Apply this shift to each character
+        for (let i = 0; i < sequence.length; i++) {
+            const char = sequence[i];
+            const code = char.charCodeAt(0);
+
+            if (code >= 65 && code <= 90) {
+                // Uppercase
+                decrypted += String.fromCharCode(((code - 65 - shift + 26) % 26) + 65);
+            } else if (code >= 97 && code <= 122) {
+                // Lowercase
+                decrypted += String.fromCharCode(((code - 97 - shift + 26) % 26) + 97);
+            } else {
+                decrypted += char;
+            }
+        }
+
+        // Calculate how similar to English
+        const frequencies = getFrequencies(decrypted);
+        const chiSquared = calculateChiSquared(frequencies);
+        results.push({ shift, chiSquared });
+    }
+
+    // Return top shifts (sorted by most like English)
+    results.sort((a, b) => a.chiSquared - b.chiSquared);
+    return results.slice(0, numOptions).map((r) => r.shift);
+};</div>
+                
+                <div class="visualization-container">
+                    <h3>Chi-Squared Visualization</h3>
+                    <p>This chart shows Chi-squared values for each of the 26 possible shifts for a particular key position. Lower values indicate better matches to English letter patterns.</p>
+                    <div id="chiSquaredChart"></div>
+                    <div id="shiftVisualization"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Refinement Tab -->
+        <div id="key-refinement" class="tab-content">
+            <div class="card">
+                <h2>Key Refinement</h2>
+                <p>After identifying potential keys, we need to test and refine them to find the most likely correct key.</p>
+                
+                <h3>Word Recognition</h3>
+                <p>A key metric for evaluating decryption quality is how many recognizable English words appear in the decrypted text.</p>
+                
+                <div class="code-block">
+// Count recognized English words in text
+const countRecognizedWords = (text) => {
+    const words = text.toLowerCase().split(/[^a-z]+/).filter((word) => word.length > 0);
+
+    let recognizedCount = 0;
+    let totalWeight = 0;
+
+    for (const word of words) {
+        if (word.length >= 2) {
+            const wordWeight = dictionary[word];
+            if (wordWeight) {
+                recognizedCount++;
+                totalWeight += wordWeight;
+            }
+        }
+    }
+
+    const percentage = words.length > 0 ? (recognizedCount / words.length) * 100 : 0;
+    const weightedScore = words.length > 0 ? totalWeight / words.length : 0;
+
+    return {
+        count: recognizedCount,
+        total: words.length,
+        percentage,
+        weightedScore
+    };
+};</div>
+                
+                <div class="note">
+                    <strong>Note:</strong> The dictionary is weighted to give higher scores to longer words and more common English words, improving accuracy.
+                </div>
+                
+                <h3>Iterative Key Refinement</h3>
+                <p>Once we have promising key candidates, we iteratively try to improve them:</p>
+                <ol>
+                    <li>Start with the initial key guess</li>
+                    <li>Try changing one letter at a time</li>
+                    <li>Evaluate each variation based on word recognition</li>
+                    <li>Keep the best performing key</li>
+                    <li>Repeat until no further improvement or reaching target recognition percentage</li>
+                </ol>
+                
+                <div class="code-block">
+// Try variations of a key to improve it
+const refineKey = (initialKey, targetPercentage, maxIters) => {
+    let bestKey = initialKey;
+    let bestDecrypted = decryptWithKey(ciphertext, bestKey);
+    let bestWordStats = countRecognizedWords(bestDecrypted);
+    let bestScore = bestWordStats.percentage;
+    let iterations = 0;
+    let improved = false;
+
+    // Continue refining until we reach target or max iterations
+    while (bestScore < targetPercentage && iterations < maxIters) {
+        iterations++;
+        let foundBetter = false;
+
+        // Try changing one letter at a time
+        for (let pos = 0; pos < bestKey.length; pos++) {
+            for (let shift = 0; shift < 26; shift++) {
+                // Skip current letter
+                if (bestKey.charCodeAt(pos) - 65 === shift) continue;
+
+                // Create new key with this letter changed
+                const newKey = bestKey.substring(0, pos) + 
+                               String.fromCharCode(65 + shift) + 
+                               bestKey.substring(pos + 1);
+
+                // Test this key
+                const decrypted = decryptWithKey(ciphertext, newKey);
+                const wordStats = countRecognizedWords(decrypted);
+
+                if (wordStats.percentage > bestScore) {
+                    bestKey = newKey;
+                    bestScore = wordStats.percentage;
+                    bestDecrypted = decrypted;
+                    bestWordStats = wordStats;
+                    foundBetter = true;
+                    improved = true;
+                    break;
+                }
+            }
+            if (foundBetter) break;
+        }
+
+        // If stuck, try random changes
+        if (!foundBetter && iterations % 3 === 0) {
+            const pos = Math.floor(Math.random() * bestKey.length);
+            const randomShift = Math.floor(Math.random() * 26);
+            const newKey = bestKey.substring(0, pos) + 
+                         String.fromCharCode(65 + randomShift) + 
+                         bestKey.substring(pos + 1);
+
+            const decrypted = decryptWithKey(ciphertext, newKey);
+            const wordStats = countRecognizedWords(decrypted);
+
+            if (wordStats.percentage > bestScore) {
+                bestKey = newKey;
+                bestScore = wordStats.percentage;
+                bestDecrypted = decrypted;
+                bestWordStats = wordStats;
+                improved = true;
+            }
+        }
+    }
+
+    return {
+        finalKey: bestKey,
+        improved,
+        iterations,
+        wordStats: bestWordStats,
+        decrypted: bestDecrypted
+    };
+};</div>
+                
+                <div class="visualization-container">
+                    <h3>Key Refinement Visualization</h3>
+                    <div id="keyRefinementVisualization"></div>
+                </div>
+                
+                <h3>Dictionary Weighting</h3>
+                <p>The word dictionary is weighted to prioritize common and longer words:</p>
+                
+                <div class="code-block">
+// Load dictionary and brute force keys on component mount
+useEffect(() => {
+    // Load words dictionary
+    const commonWords = Data.commonWords || [];
+    const dict = {};
+
+    commonWords.forEach((word, index) => {
+        // Give higher weights to longer words and more common words
+        let weight = 1.0;
+        if (word.length > 2) weight += (word.length - 2) * 0.3;
+        if (index < 500) weight += 0.8;
+        dict[word] = weight;
+    });
+
+    setDictionary(dict);
+    
+    // Load brute force keys
+    if (VKData && VKData.keys) {
+        setBruteForceKeys(VKData.keys);
+    }
+}, []);</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab navigation
+        document.querySelectorAll('.nav-item').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs
+                document.querySelectorAll('.nav-item').forEach(t => {
+                    t.classList.remove('active');
+                });
+                
+                // Remove active class from all content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Add active class to clicked tab
+                tab.classList.add('active');
+                
+                // Show corresponding content
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+                
+                // Initialize visualizations for the active tab
+                if (tabId === 'overview') {
+                    drawVigenereTable();
+                } else if (tabId === 'ic-method') {
+                    drawICChart();
+                    visualizeSequences();
+                } else if (tabId === 'freq-analysis') {
+                    drawLetterFrequencyChart();
+                    drawChiSquaredChart();
+                } else if (tabId === 'key-refinement') {
+                    visualizeKeyRefinement();
+                } else if (tabId === 'interactive') {
+                    setupInteractiveDemo();
+                }
+            });
+        });
+
+                    // Draw Vigenere Table
+                    function drawVigenereTable() {
+                        const canvas = document.getElementById('vigenereTable');
+                        const ctx = canvas.getContext('2d');
+                        const cellSize = 18;
+
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        // Draw header row and column
+                        ctx.fillStyle = '#4361ee';
+
+                        // Draw header column
+                        for (let i = 0; i < 26; i++) {
+                            ctx.fillStyle = i % 2 === 0 ? '#e9ecef' : '#dee2e6';
+                            ctx.fillRect(0, (i + 1) * cellSize, cellSize, cellSize);
+                            ctx.fillStyle = '#212529';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.fillText(String.fromCharCode(65 + i), cellSize / 2 - 4, (i + 1) * cellSize + cellSize / 2 + 4);
+                        }
+
+                        // Draw header row
+                        for (let i = 0; i < 26; i++) {
+                            ctx.fillStyle = i % 2 === 0 ? '#e9ecef' : '#dee2e6';
+                            ctx.fillRect((i + 1) * cellSize, 0, cellSize, cellSize);
+                            ctx.fillStyle = '#212529';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.fillText(String.fromCharCode(65 + i), (i + 1) * cellSize + cellSize / 2 - 4, cellSize / 2 + 4);
+                        }
+
+                        // Draw table cells
+                        for (let row = 0; row < 26; row++) {
+                            for (let col = 0; col < 26; col++) {
+                                const letter = String.fromCharCode(65 + ((row + col) % 26));
+
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillRect((col + 1) * cellSize, (row + 1) * cellSize, cellSize, cellSize);
+
+                                ctx.fillStyle = '#212529';
+                                ctx.font = '11px Arial';
+                                ctx.fillText(letter, (col + 1) * cellSize + cellSize / 2 - 4, (row + 1) * cellSize + cellSize / 2 + 4);
+                            }
+                        }
+
+                        // Draw grid lines
+                        ctx.strokeStyle = '#dee2e6';
+                        ctx.lineWidth = 0.5;
+
+                        for (let i = 0; i <= 27; i++) {
+                            ctx.beginPath();
+                            ctx.moveTo(0, i * cellSize);
+                            ctx.lineTo(27 * cellSize, i * cellSize);
+                            ctx.stroke();
+
+                            ctx.beginPath();
+                            ctx.moveTo(i * cellSize, 0);
+                            ctx.lineTo(i * cellSize, 27 * cellSize);
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Draw Index of Coincidence Chart
+                    function drawICChart() {
+                        const canvas = document.getElementById('icVisualization');
+                        const ctx = canvas.getContext('2d');
+
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        const data = [
+                            { keyLength: 1, ic: 0.041 },
+                            { keyLength: 2, ic: 0.043 },
+                            { keyLength: 3, ic: 0.046 },
+                            { keyLength: 4, ic: 0.048 },
+                            { keyLength: 5, ic: 0.065 },
+                            { keyLength: 6, ic: 0.044 },
+                            { keyLength: 7, ic: 0.045 },
+                            { keyLength: 8, ic: 0.047 },
+                            { keyLength: 9, ic: 0.043 },
+                            { keyLength: 10, ic: 0.067 }
+                        ];
+
+                        const padding = 40;
+                        const chartWidth = canvas.width - 2 * padding;
+                        const chartHeight = canvas.height - 2 * padding;
+
+                        // Draw axes
+                        ctx.strokeStyle = '#212529';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(padding, padding);
+                        ctx.lineTo(padding, canvas.height - padding);
+                        ctx.lineTo(canvas.width - padding, canvas.height - padding);
+                        ctx.stroke();
+
+                        // Draw axis labels
+                        ctx.fillStyle = '#212529';
+                        ctx.font = '12px Arial';
+                        ctx.fillText('Key Length', canvas.width / 2 - 30, canvas.height - 10);
+
+                        // Y-axis label (rotated)
+                        ctx.save();
+                        ctx.translate(15, canvas.height / 2);
+                        ctx.rotate(-Math.PI / 2);
+                        ctx.fillText('Index of Coincidence', 0, 0);
+                        ctx.restore();
+
+                        // Draw reference line for English text IC (0.067)
+                        const englishIC = 0.067;
+                        const yEnglish = canvas.height - padding - (englishIC * chartHeight / 0.08);
+
+                        ctx.setLineDash([5, 5]);
+                        ctx.strokeStyle = '#3a0ca3';
+                        ctx.beginPath();
+                        ctx.moveTo(padding, yEnglish);
+                        ctx.lineTo(canvas.width - padding, yEnglish);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        ctx.fillStyle = '#3a0ca3';
+                        ctx.fillText('English Text IC (0.067)', padding + 10, yEnglish - 5);
+
+                        // Draw random text reference line (0.038)
+                        const randomIC = 0.038;
+                        const yRandom = canvas.height - padding - (randomIC * chartHeight / 0.08);
+
+                        ctx.setLineDash([5, 5]);
+                        ctx.strokeStyle = '#ff9100';
+                        ctx.beginPath();
+                        ctx.moveTo(padding, yRandom);
+                        ctx.lineTo(canvas.width - padding, yRandom);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        ctx.fillStyle = '#ff9100';
+                        ctx.fillText('Random Text IC (0.038)', padding + 10, yRandom - 5);
+
+                        // Draw data points and connecting lines
+                        ctx.strokeStyle = '#4361ee';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+
+                        for (let i = 0; i < data.length; i++) {
+                            const x = padding + (i * chartWidth / (data.length - 1));
+                            const y = canvas.height - padding - (data[i].ic * chartHeight / 0.08);
+
+                            if (i === 0) {
+                                ctx.moveTo(x, y);
+                            } else {
+                                ctx.lineTo(x, y);
+                            }
+
+                            // Draw x-axis labels
+                            ctx.fillStyle = '#212529';
+                            ctx.fillText(data[i].keyLength, x - 5, canvas.height - padding + 15);
+                        }
+
+                        ctx.stroke();
+
+                        // Draw data points
+                        for (let i = 0; i < data.length; i++) {
+                            const x = padding + (i * chartWidth / (data.length - 1));
+                            const y = canvas.height - padding - (data[i].ic * chartHeight / 0.08);
+
+                            ctx.fillStyle = '#4361ee';
+                            ctx.beginPath();
+                            ctx.arc(x, y, 5, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            // Draw value labels
+                            ctx.fillStyle = '#212529';
+                            ctx.fillText(data[i].ic.toFixed(3), x - 15, y - 10);
+                        }
+
+                        // Highlight key lengths with highest IC
+                        const highIC = data.filter(d => d.ic > 0.06);
+                        for (const point of highIC) {
+                            const index = data.findIndex(d => d.keyLength === point.keyLength);
+                            const x = padding + (index * chartWidth / (data.length - 1));
+                            const y = canvas.height - padding - (point.ic * chartHeight / 0.08);
+
+                            ctx.strokeStyle = '#ffb703';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.arc(x, y, 8, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Visualize sequences for different key lengths
+                    function visualizeSequences() {
+                        const container = document.getElementById('sequencesVisualization');
+                        container.innerHTML = '';
+
+                        const keyLength = 5; // Example key length
+
+                        const title = document.createElement('h4');
+                        title.textContent = `Sequences for Key Length = ${keyLength}`;
+                        container.appendChild(title);
+
+                        // Create a grid to visualize the sequences
+                        const grid = document.createElement('div');
+                        grid.style.display = 'grid';
+                        grid.style.gridTemplateColumns = `repeat(${keyLength}, 1fr)`;
+                        grid.style.gap = '10px';
+                        grid.style.marginTop = '20px';
+                        container.appendChild(grid);
+
+                        // Sample ciphertext
+                        const ciphertext = "HZYAOTAWHIPNBWSYDRZ";
+
+                        // Create columns for each sequence
+                        for (let i = 0; i < keyLength; i++) {
+                            const column = document.createElement('div');
+                            column.style.border = '1px solid #dee2e6';
+                            column.style.padding = '10px';
+                            column.style.borderRadius = '5px';
+                            column.style.backgroundColor = '#f8f9fa';
+                            column.style.textAlign = 'center';
+
+                            const header = document.createElement('div');
+                            header.textContent = `Sequence ${i + 1}`;
+                            header.style.fontWeight = 'bold';
+                            header.style.marginBottom = '10px';
+                            column.appendChild(header);
+
+                            // Extract letters for this sequence
+                            let sequence = '';
+                            for (let j = i; j < ciphertext.length; j += keyLength) {
+                                sequence += ciphertext[j];
+                            }
+
+                            // Display letters
+                            for (let j = 0; j < sequence.length; j++) {
+                                const letter = document.createElement('div');
+                                letter.textContent = sequence[j];
+                                letter.style.margin = '5px 0';
+                                letter.style.padding = '5px';
+                                letter.style.backgroundColor = '#4361ee';
+                                letter.style.color = 'white';
+                                letter.style.borderRadius = '3px';
+                                column.appendChild(letter);
+                            }
+
+                            // Show IC value
+                            const ic = calculateSimpleIC(sequence);
+                            const icDiv = document.createElement('div');
+                            icDiv.textContent = `IC: ${ic.toFixed(3)}`;
+                            icDiv.style.marginTop = '10px';
+                            icDiv.style.fontWeight = 'bold';
+                            column.appendChild(icDiv);
+
+                            grid.appendChild(column);
+                        }
+
+                        // Add an explanation
+                        const explanation = document.createElement('p');
+                        explanation.textContent = 'Each column represents letters that were encrypted with the same key letter. When the key length is correct, these sequences will have IC values closer to English text.';
+                        explanation.style.marginTop = '20px';
+                        container.appendChild(explanation);
+                    }
+
+                    // Simple IC calculation for demo
+                    function calculateSimpleIC(text) {
+                        const freq = {};
+                        const n = text.length;
+
+                        // Count letter frequencies
+                        for (let i = 0; i < n; i++) {
+                            const char = text[i].toUpperCase();
+                            freq[char] = (freq[char] || 0) + 1;
+                        }
+
+                        // Calculate IC
+                        let sum = 0;
+                        for (const letter in freq) {
+                            const count = freq[letter];
+                            sum += count * (count - 1);
+                        }
+
+                        return n <= 1 ? 0 : sum / (n * (n - 1));
+                    }
+
+                    // Draw English letter frequency chart
+                    function drawLetterFrequencyChart() {
+                        const container = document.getElementById('letterFrequencyChart');
+                        container.innerHTML = '';
+
+                        // English letter frequencies
+                        const frequencies = {
+                            E: 0.1202, T: 0.091, A: 0.0812, O: 0.0768,
+                            I: 0.0731, N: 0.0695, S: 0.0628, R: 0.0602,
+                            H: 0.0592, D: 0.0432, L: 0.0398, U: 0.0288,
+                            C: 0.0271, M: 0.0261, F: 0.023, Y: 0.0211,
+                            W: 0.0209, G: 0.0203, P: 0.0182, B: 0.0149,
+                            V: 0.0111, K: 0.0069, X: 0.0017, Q: 0.0011,
+                            J: 0.001, Z: 0.0007
+                        };
+
+                        // Sort by frequency (high to low)
+                        const sortedLetters = Object.keys(frequencies).sort((a, b) => frequencies[b] - frequencies[a]);
+
+                        // Create bar chart
+                        const chart = document.createElement('div');
+                        chart.style.display = 'flex';
+                        chart.style.height = '250px';
+                        chart.style.alignItems = 'flex-end';
+                        chart.style.gap = '2px';
+                        container.appendChild(chart);
+
+                        for (const letter of sortedLetters) {
+                            const bar = document.createElement('div');
+                            const height = frequencies[letter] * 2000;
+
+                            bar.style.width = `${100 / 26}%`;
+                            bar.style.height = `${height}px`;
+                            bar.style.backgroundColor = '#4361ee';
+                            bar.style.position = 'relative';
+                            bar.style.borderTopLeftRadius = '3px';
+                            bar.style.borderTopRightRadius = '3px';
+
+  // Add letter labels
+            const label = document.createElement('div');
+            label.textContent = letter;
+            label.style.position = 'absolute';
+            label.style.bottom = '-20px';
+            label.style.width = '100%';
+            label.style.textAlign = 'center';
+            bar.appendChild(label);
+
+            // Add frequency labels
+            const freqLabel = document.createElement('div');
+            freqLabel.textContent = (frequencies[letter] * 100).toFixed(1) + '%';
+            freqLabel.style.position = 'absolute';
+            freqLabel.style.bottom = `${height + 5}px`;
+            freqLabel.style.width = '100%';
+            freqLabel.style.textAlign = 'center';
+            freqLabel.style.fontSize = '10px';
+            freqLabel.style.transform = 'rotate(-90deg)';
+            freqLabel.style.transformOrigin = 'center left';
+            bar.appendChild(freqLabel);
+
+            chart.appendChild(bar);
+        }
+    }
+
+    // Draw Chi-Squared chart
+    function drawChiSquaredChart() {
+        const container = document.getElementById('chiSquaredChart');
+        container.innerHTML = '';
+
+        // Example Chi-squared values for each shift (for key position 0)
+        const chiSquaredValues = [
+            183.2, 92.5, 105.7, 146.3, 79.4, 124.8, 217.9, 251.4, 173.2, 142.6,
+            128.9, 94.7, 89.5, 237.4, 45.2, 189.4, 76.9, 97.3, 186.5, 163.8,
+            124.5, 139.8, 177.2, 215.9, 156.1, 204.3
+        ];
+
+        // Create bar chart
+        const chart = document.createElement('div');
+        chart.style.display = 'flex';
+        chart.style.height = '250px';
+        chart.style.alignItems = 'flex-end';
+        chart.style.gap = '2px';
+        container.appendChild(chart);
+
+        // Find min and max for scaling
+        const maxValue = Math.max(...chiSquaredValues);
+
+        // Find index of minimum (best match)
+        const minIndex = chiSquaredValues.indexOf(Math.min(...chiSquaredValues));
+
+        for (let i = 0; i < 26; i++) {
+            const value = chiSquaredValues[i];
+            // Invert height so lower values are taller
+            const height = 200 * (1 - (value / maxValue)) + 50;
+
+            const bar = document.createElement('div');
+            bar.style.width = `${100 / 26}%`;
+            bar.style.height = `${height}px`;
+            bar.style.backgroundColor = i === minIndex ? '#ffb703' : '#4361ee';
+            bar.style.position = 'relative';
+            bar.style.borderTopLeftRadius = '3px';
+            bar.style.borderTopRightRadius = '3px';
+
+            // Add shift labels
+            const label = document.createElement('div');
+            label.textContent = String.fromCharCode(65 + i);
+            label.style.position = 'absolute';
+            label.style.bottom = '-20px';
+            label.style.width = '100%';
+            label.style.textAlign = 'center';
+            bar.appendChild(label);
+
+            chart.appendChild(bar);
+        }
+
+        // Add an explanation
+        const explanation = document.createElement('p');
+        explanation.style.marginTop = '30px';
+        explanation.innerHTML = `<strong>The highlighted bar represents the best shift for this key position.</strong> Letter <strong>${String.fromCharCode(65 + minIndex)}</strong> has the lowest Chi-squared value (${chiSquaredValues[minIndex].toFixed(1)}), meaning it produces a frequency distribution most similar to English text.`;
+        container.appendChild(explanation);
+
+        visualizeShift(minIndex);
+    }
+
+    // Visualize the shift transformation
+    function visualizeShift(shift) {
+        const container = document.getElementById('shiftVisualization');
+        container.innerHTML = '';
+
+        const title = document.createElement('h4');
+        title.textContent = `Visualizing Shift for Key Position (Using shift = ${shift})`;
+        container.appendChild(title);
+
+        // Create visualization for the shifting process
+        const vizContainer = document.createElement('div');
+        vizContainer.style.marginTop = '20px';
+        vizContainer.style.padding = '20px';
+        vizContainer.style.backgroundColor = '#f8f9fa';
+        vizContainer.style.borderRadius = '8px';
+        container.appendChild(vizContainer);
+
+        // Alphabet row
+        const alphabetRow = document.createElement('div');
+        alphabetRow.style.display = 'flex';
+        alphabetRow.style.marginBottom = '10px';
+        vizContainer.appendChild(alphabetRow);
+
+        // Create alphabet cells
+        for (let i = 0; i < 26; i++) {
+            const cell = document.createElement('div');
+            cell.textContent = String.fromCharCode(65 + i);
+            cell.style.width = '30px';
+            cell.style.height = '30px';
+            cell.style.display = 'flex';
+            cell.style.alignItems = 'center';
+            cell.style.justifyContent = 'center';
+            cell.style.border = '1px solid #dee2e6';
+            cell.style.backgroundColor = '#e9ecef';
+            alphabetRow.appendChild(cell);
+        }
+
+        // Arrow
+        const arrow = document.createElement('div');
+        arrow.innerHTML = '⬇️';
+        arrow.style.textAlign = 'center';
+        arrow.style.margin = '5px 0';
+        arrow.style.fontSize = '24px';
+        vizContainer.appendChild(arrow);
+
+        // Shifted alphabet row
+        const shiftedRow = document.createElement('div');
+        shiftedRow.style.display = 'flex';
+        vizContainer.appendChild(shiftedRow);
+
+        // Create shifted alphabet cells
+        for (let i = 0; i < 26; i++) {
+            const originalChar = String.fromCharCode(65 + i);
+            const shiftedIndex = (i - shift + 26) % 26;
+            const shiftedChar = String.fromCharCode(65 + shiftedIndex);
+
+            const cell = document.createElement('div');
+            cell.textContent = shiftedChar;
+            cell.style.width = '30px';
+            cell.style.height = '30px';
+            cell.style.display = 'flex';
+            cell.style.alignItems = 'center';
+            cell.style.justifyContent = 'center';
+            cell.style.border = '1px solid #dee2e6';
+            cell.style.backgroundColor = '#ffffff';
+
+            if (i === shift) {
+                cell.style.backgroundColor = '#ffb703';
+                cell.style.fontWeight = 'bold';
+            }
+
+            shiftedRow.appendChild(cell);
+        }
+
+        // Add explanation
+        const explanation = document.createElement('p');
+        explanation.style.marginTop = '20px';
+        explanation.innerHTML = `When we apply the shift of <strong>${shift}</strong> (key letter <strong>${String.fromCharCode(65 + shift)}</strong>), each letter in the ciphertext sequence is shifted by this amount. This produces a letter distribution that most closely matches English text frequencies.`;
+        vizContainer.appendChild(explanation);
+    }
+
+    // Visualize Key Refinement Process
+    function visualizeKeyRefinement() {
+        const container = document.getElementById('keyRefinementVisualization');
+        container.innerHTML = '';
+
+        const title = document.createElement('h3');
+        title.textContent = 'Key Refinement Process Visualization';
+        container.appendChild(title);
+
+        // Initial key and iterative improvement simulation
+        const initialKey = 'TIGER';
+        const iterations = [
+            { key: 'TIGER', wordRecognition: 56.3, improvements: [] },
+            { key: 'TIKER', wordRecognition: 62.8, improvements: ['G → K'] },
+            { key: 'TIMER', wordRecognition: 72.1, improvements: ['K → M'] },
+            { key: 'VIMER', wordRecognition: 85.7, improvements: ['T → V'] },
+            { key: 'VIPER', wordRecognition: 92.4, improvements: ['M → P'] }
+        ];
+
+        // Create visualization
+        const vizContainer = document.createElement('div');
+        vizContainer.style.marginTop = '20px';
+        container.appendChild(vizContainer);
+
+        // Iteration progress
+        for (let i = 0; i < iterations.length; i++) {
+            const iteration = iterations[i];
+
+            const iterBox = document.createElement('div');
+            iterBox.style.display = 'flex';
+            iterBox.style.alignItems = 'center';
+            iterBox.style.marginBottom = '20px';
+            iterBox.style.padding = '15px';
+            iterBox.style.backgroundColor = '#f8f9fa';
+            iterBox.style.borderRadius = '8px';
+            iterBox.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+            vizContainer.appendChild(iterBox);
+
+            // Iteration number
+            const iterNum = document.createElement('div');
+            iterNum.textContent = i;
+            iterNum.style.width = '40px';
+            iterNum.style.height = '40px';
+            iterNum.style.borderRadius = '50%';
+            iterNum.style.backgroundColor = '#4361ee';
+            iterNum.style.color = 'white';
+            iterNum.style.display = 'flex';
+            iterNum.style.alignItems = 'center';
+            iterNum.style.justifyContent = 'center';
+            iterNum.style.fontWeight = 'bold';
+            iterNum.style.marginRight = '20px';
+            iterNum.style.flexShrink = '0';
+            iterBox.appendChild(iterNum);
+
+            // Key visualization
+            const keyDiv = document.createElement('div');
+            keyDiv.style.flex = '1';
+            iterBox.appendChild(keyDiv);
+
+            // Key letters
+            const keyLetters = document.createElement('div');
+            keyLetters.style.display = 'flex';
+            keyLetters.style.marginBottom = '10px';
+            keyDiv.appendChild(keyLetters);
+
+            for (let j = 0; j < iteration.key.length; j++) {
+                const letterBox = document.createElement('div');
+                letterBox.textContent = iteration.key[j];
+                letterBox.style.width = '40px';
+                letterBox.style.height = '40px';
+                letterBox.style.display = 'flex';
+                letterBox.style.alignItems = 'center';
+                letterBox.style.justifyContent = 'center';
+                letterBox.style.border = '1px solid #dee2e6';
+                letterBox.style.marginRight = '5px';
+                letterBox.style.fontWeight = 'bold';
+
+                // Highlight changes
+                if (i > 0 && iteration.key[j] !== iterations[i - 1].key[j]) {
+                    letterBox.style.backgroundColor = '#ffb703';
+                }
+
+                keyLetters.appendChild(letterBox);
+            }
+
+            // Word recognition percentage
+            const recognition = document.createElement('div');
+            recognition.innerHTML = `Word Recognition: <strong>${iteration.wordRecognition}%</strong>`;
+            keyDiv.appendChild(recognition);
+
+            // Improvements made
+            if (iteration.improvements.length > 0) {
+                const improvements = document.createElement('div');
+                improvements.style.color = '#3a0ca3';
+                improvements.style.marginTop = '5px';
+                improvements.innerHTML = `Changes: ${iteration.improvements.join(', ')}`;
+                keyDiv.appendChild(improvements);
+            }
+
+            // Progress bar
+            const progressContainer = document.createElement('div');
+            progressContainer.style.height = '10px';
+            progressContainer.style.backgroundColor = '#e9ecef';
+            progressContainer.style.borderRadius = '5px';
+            progressContainer.style.overflow = 'hidden';
+            progressContainer.style.marginTop = '10px';
+            keyDiv.appendChild(progressContainer);
+
+            const progressBar = document.createElement('div');
+            progressBar.style.height = '100%';
+            progressBar.style.width = `${iteration.wordRecognition}%`;
+            progressBar.style.backgroundColor = '#4361ee';
+            progressContainer.appendChild(progressBar);
+        }
+
+        // Add final result
+        const finalResult = document.createElement('div');
+        finalResult.style.marginTop = '30px';
+        finalResult.style.padding = '20px';
+        finalResult.style.backgroundColor = '#e9f5ff';
+        finalResult.style.borderRadius = '8px';
+        finalResult.style.border = '2px solid #4361ee';
+
+        const finalTitle = document.createElement('h3');
+        finalTitle.textContent = 'Final Key Found';
+        finalResult.appendChild(finalTitle);
+
+        const keyResult = document.createElement('div');
+        keyResult.innerHTML = `<span style="font-size: 24px; font-weight: bold;">VIPER</span>`;
+        keyResult.style.margin = '15px 0';
+        finalResult.appendChild(keyResult);
+
+        const stats = document.createElement('div');
+        stats.innerHTML = `
+                            <div>Word Recognition: <strong>92.4%</strong></div>
+                            <div>Original Key Guess: <strong>TIGER</strong></div>
+                            <div>Iterations Required: <strong>4</strong></div>
+                        `;
+        finalResult.appendChild(stats);
+
+        container.appendChild(finalResult);
+    }
+                </script>
