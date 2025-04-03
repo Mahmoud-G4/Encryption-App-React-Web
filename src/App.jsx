@@ -1,7 +1,8 @@
+// App.jsx modifications
 import React from "react";
 import "./styles/Vegenire.module.css";
 import "./styles/Main-Screen.css";
-import "./styles/Caesar.module.css"; // Import CSS module correctly
+import "./styles/Caesar.module.css";
 import "./styles/Rail.module.css";
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";

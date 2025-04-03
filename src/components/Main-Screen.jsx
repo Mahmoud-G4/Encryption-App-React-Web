@@ -1,5 +1,5 @@
 // MainScreen.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../styles/Main-Screen.css";
 import logo from "../images/logo1.png";
 import { useNavigate } from "react-router-dom";
@@ -195,7 +195,6 @@ export default function MainScreen() {
       >
         Vigenère Cracker
       </button>
-
       <button
         className="main-screen__button"
         onClick={() => navigate("RFCracker")}
