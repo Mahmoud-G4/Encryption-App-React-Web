@@ -40,6 +40,9 @@ Key Refinement </br>
 
 
  </br> </br> </br>
+Install : </br>
+```npm install ```
+</br>
 Run : </br>
 ```npx expo start ```
 
