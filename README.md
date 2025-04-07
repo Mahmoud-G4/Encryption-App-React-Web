@@ -5,6 +5,8 @@ Shifting : $${\color{lightblue}Ceasar Cipher}$$ </br>
 Key : $${\color{lightblue}Vigenere Cipher}$$ </br>
 Rails :  $${\color{lightblue}Rail Fence}$$ </br>
 
+The app is tested on varios key lengths and cipher lengths in Vigenere Cipher as you will see down in the Heatmap and got a pretty decent results
+
  <b>Mobile app version:</b>
  (https://github.com/AmrKhamis1/Encryption_App)
 
@@ -19,7 +21,8 @@ Dictionary-Based Validation </br>
 Key Refinement </br>
 </br> </br>
 
-
+> [!NOTE]
+>  The Vigenere Cipher Cracker is implemented as Front-End logic code by React.js so when increasing Maximum iterations it will give a good result but at the expense of CPU </br>
 
 
 > [!IMPORTANT]
