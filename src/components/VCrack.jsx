@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "../styles/Vegenire.module.css";
 import Data from "./Words.json";
-import VKData from "./VK.json"; // Import the VK.json file with keys
+import VKData from "./VK.json";
+import * as VigenereLogic from "./VigenereLogic";
 
 export default function VCracker() {
   // State variables
@@ -14,9 +15,16 @@ export default function VCracker() {
   const [dictionary, setDictionary] = useState({});
   const [decryptedText, setDecryptedText] = useState("");
   const [targetRecognition, setTargetRecognition] = useState(90);
-  const [maxIterations, setMaxIterations] = useState(25);
-  const [useBruteForce, setUseBruteForce] = useState(false); // Add brute force option
-  const [bruteForceKeys, setBruteForceKeys] = useState([]); // Store VK keys
+  const [maxIterations, setMaxIterations] = useState(35);
+  const [useBruteForce, setUseBruteForce] = useState(false);
+  const [bruteForceKeys, setBruteForceKeys] = useState([]);
+  const [workerCount, setWorkerCount] = useState(4);
+  const [progressPercentage, setProgressPercentage] = useState(0);
+
+  // Refs for workers and cancellation
+  const workersRef = useRef([]);
+  const activeWorkersRef = useRef(0);
+  const isCancelledRef = useRef(false);
 
   // Load dictionary and brute force keys on component mount
   useEffect(() => {
@@ -38,610 +46,425 @@ export default function VCracker() {
     if (VKData && VKData.keys) {
       setBruteForceKeys(VKData.keys);
     }
+
+    // Determine optimal worker count based on available CPUs
+    if (window.navigator && window.navigator.hardwareConcurrency) {
+      // Use available CPU cores minus 1 to leave one for UI
+      const optimalWorkers = Math.max(
+        1,
+        window.navigator.hardwareConcurrency - 1
+      );
+      setWorkerCount(optimalWorkers);
+    }
+
+    // Clean up workers on unmount
+    return () => {
+      terminateAllWorkers();
+    };
   }, []);
 
-  // English letter frequencies (most common to least common)
-  const ENGLISH_FREQUENCIES = {
-    E: 0.1202,
-    T: 0.091,
-    A: 0.0812,
-    O: 0.0768,
-    I: 0.0731,
-    N: 0.0695,
-    S: 0.0628,
-    R: 0.0602,
-    H: 0.0592,
-    D: 0.0432,
-    L: 0.0398,
-    U: 0.0288,
-    C: 0.0271,
-    M: 0.0261,
-    F: 0.023,
-    Y: 0.0211,
-    W: 0.0209,
-    G: 0.0203,
-    P: 0.0182,
-    B: 0.0149,
-    V: 0.0111,
-    K: 0.0069,
-    X: 0.0017,
-    Q: 0.0011,
-    J: 0.001,
-    Z: 0.0007,
-  };
+  // Initialize web workers
+  const initializeWorkers = () => {
+    terminateAllWorkers();
+    workersRef.current = [];
+    activeWorkersRef.current = 0;
 
-  // Calculate Index of Coincidence (helps determine key length)
-  const calculateIC = (text) => {
-    const cleanText = text.toUpperCase().replace(/[^A-Z]/g, "");
-    const frequencies = {};
-    const length = cleanText.length;
-
-    // Count each letter
-    for (let i = 0; i < length; i++) {
-      frequencies[cleanText[i]] = (frequencies[cleanText[i]] || 0) + 1;
-    }
-
-    // Calculate IC value
-    let sum = 0;
-    for (const letter in frequencies) {
-      const count = frequencies[letter];
-      sum += count * (count - 1);
-    }
-
-    if (length <= 1) return 0;
-    return sum / (length * (length - 1));
-  };
-
-  // Calculate frequency of each letter in the text
-  const getFrequencies = (text) => {
-    const cleanText = text.toUpperCase();
-    const frequencies = {};
-    let total = 0;
-
-    for (let i = 0; i < cleanText.length; i++) {
-      const char = cleanText[i];
-      if (/[A-Z]/.test(char)) {
-        frequencies[char] = (frequencies[char] || 0) + 1;
-        total++;
-      }
-    }
-
-    // Convert counts to percentages
-    for (const letter in frequencies) {
-      frequencies[letter] /= total;
-    }
-
-    return frequencies;
-  };
-
-  // Compare letter frequencies to English using Chi-squared test
-  const calculateChiSquared = (frequencies) => {
-    let chiSquared = 0;
-    for (let i = 0; i < 26; i++) {
-      const letter = String.fromCharCode(65 + i);
-      const observed = frequencies[letter] || 0;
-      const expected = ENGLISH_FREQUENCIES[letter] || 0;
-      if (expected > 0) {
-        chiSquared += Math.pow(observed - expected, 2) / expected;
-      }
-    }
-    return chiSquared; // Lower is better (more like English)
-  };
-
-  // Split text into sequences based on key length
-  const getSequences = (text, keyLength) => {
-    // Create array to hold each sequence
-    const sequences = Array(keyLength)
-      .fill()
-      .map(() => "");
-    let j = 0;
-
-    // Distribute letters to sequences
-    for (let i = 0; i < text.length; i++) {
-      if (/[A-Z]/i.test(text[i])) {
-        const position = j % keyLength;
-        sequences[position] += text[i];
-        j++;
-      }
-    }
-
-    return sequences;
-  };
-
-  // Find possible shifts for each sequence
-  const findBestShifts = (sequence, numOptions = 5) => {
-    const results = [];
-
-    // Try all 26 possible shifts
-    for (let shift = 0; shift < 26; shift++) {
-      let decrypted = "";
-      // Apply this shift to each character
-      for (let i = 0; i < sequence.length; i++) {
-        const char = sequence[i];
-        const code = char.charCodeAt(0);
-
-        if (code >= 65 && code <= 90) {
-          // Uppercase
-          decrypted += String.fromCharCode(
-            ((code - 65 - shift + 26) % 26) + 65
-          );
-        } else if (code >= 97 && code <= 122) {
-          // Lowercase
-          decrypted += String.fromCharCode(
-            ((code - 97 - shift + 26) % 26) + 97
-          );
-        } else {
-          decrypted += char;
-        }
-      }
-
-      // Calculate how similar to English
-      const frequencies = getFrequencies(decrypted);
-      const chiSquared = calculateChiSquared(frequencies);
-      results.push({ shift, chiSquared });
-    }
-
-    // Return top shifts (sorted by most like English)
-    results.sort((a, b) => a.chiSquared - b.chiSquared);
-    return results.slice(0, numOptions).map((r) => r.shift);
-  };
-
-  // Convert shifts to a key string
-  const shiftsToKey = (shifts) => {
-    return shifts.map((shift) => String.fromCharCode(shift + 65)).join("");
-  };
-
-  // Decrypt text with a given key
-  const decryptWithKey = (text, key) => {
-    if (!key) return text;
-
-    const upperKey = key.toUpperCase();
-    let result = "";
-    let keyIndex = 0;
-
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      if (char.match(/[a-z]/i)) {
-        const isUpperCase = char === char.toUpperCase();
-        // Convert to 0-25 range
-        const charCode = char.toUpperCase().charCodeAt(0) - 65;
-        const keyChar = upperKey[keyIndex % upperKey.length];
-        const keyCode = keyChar.charCodeAt(0) - 65;
-
-        // Apply Vigenère decryption formula
-        let decryptedCode = (charCode - keyCode + 26) % 26;
-        let decryptedChar = String.fromCharCode(decryptedCode + 65);
-
-        if (!isUpperCase) {
-          decryptedChar = decryptedChar.toLowerCase();
-        }
-
-        result += decryptedChar;
-        keyIndex++;
-      } else {
-        result += char; // Keep non-alphabetic characters
-      }
-    }
-
-    return result;
-  };
-
-  // Count recognized English words in text
-  const countRecognizedWords = (text) => {
-    const words = text
-      .toLowerCase()
-      .split(/[^a-z]+/)
-      .filter((word) => word.length > 0);
-
-    let recognizedCount = 0;
-    let totalWeight = 0;
-
-    for (const word of words) {
-      if (word.length >= 2) {
-        const wordWeight = dictionary[word];
-        if (wordWeight) {
-          recognizedCount++;
-          totalWeight += wordWeight;
-        }
-      }
-    }
-
-    const percentage =
-      words.length > 0 ? (recognizedCount / words.length) * 100 : 0;
-    const weightedScore = words.length > 0 ? totalWeight / words.length : 0;
-
-    return {
-      count: recognizedCount,
-      total: words.length,
-      percentage,
-      weightedScore,
-    };
-  };
-
-  // Try variations of a key to improve it
-  const refineKey = (initialKey, targetPercentage, maxIters) => {
-    let bestKey = initialKey;
-    let bestDecrypted = decryptWithKey(ciphertext, bestKey);
-    let bestWordStats = countRecognizedWords(bestDecrypted);
-    let bestScore = bestWordStats.percentage;
-    let iterations = 0;
-    let improved = false;
-
-    // Continue refining until we reach target or max iterations
-    while (bestScore < targetPercentage && iterations < maxIters) {
-      iterations++;
-      setResult(
-        `Refining key (iteration ${iterations}/${maxIters}). Current recognition: ${bestScore.toFixed(
-          2
-        )}%`
+    for (let i = 0; i < workerCount; i++) {
+      const worker = new Worker(
+        new URL("./VigenereWorker.js", import.meta.url)
       );
-      let foundBetter = false;
 
-      // Try changing one letter at a time
-      for (let pos = 0; pos < bestKey.length; pos++) {
-        for (let shift = 0; shift < 26; shift++) {
-          // Skip current letter
-          if (bestKey.charCodeAt(pos) - 65 === shift) continue;
+      worker.onmessage = (e) => {
+        handleWorkerMessage(e.data, i);
+      };
 
-          // Create new key with this letter changed
-          const newKey =
-            bestKey.substring(0, pos) +
-            String.fromCharCode(65 + shift) +
-            bestKey.substring(pos + 1);
+      worker.onerror = (error) => {
+        console.error(`Worker ${i} error:`, error);
+        setResult((prev) => `${prev}\nError in worker ${i}: ${error.message}`);
+        activeWorkersRef.current--;
+        checkWorkersComplete();
+      };
 
-          // Test this key
-          const decrypted = decryptWithKey(ciphertext, newKey);
-          const wordStats = countRecognizedWords(decrypted);
-
-          if (wordStats.percentage > bestScore) {
-            bestKey = newKey;
-            bestScore = wordStats.percentage;
-            bestDecrypted = decrypted;
-            bestWordStats = wordStats;
-            foundBetter = true;
-            improved = true;
-            break;
-          }
-        }
-        if (foundBetter) break;
-      }
-
-      // If stuck, try random changes
-      if (!foundBetter && iterations % 3 === 0) {
-        const pos = Math.floor(Math.random() * bestKey.length);
-        const randomShift = Math.floor(Math.random() * 26);
-        const newKey =
-          bestKey.substring(0, pos) +
-          String.fromCharCode(65 + randomShift) +
-          bestKey.substring(pos + 1);
-
-        const decrypted = decryptWithKey(ciphertext, newKey);
-        const wordStats = countRecognizedWords(decrypted);
-
-        if (wordStats.percentage > bestScore) {
-          bestKey = newKey;
-          bestScore = wordStats.percentage;
-          bestDecrypted = decrypted;
-          bestWordStats = wordStats;
-          improved = true;
-        }
-      }
+      workersRef.current.push(worker);
     }
-
-    return {
-      finalKey: bestKey,
-      improved,
-      iterations,
-      wordStats: bestWordStats,
-      decrypted: bestDecrypted,
-    };
   };
 
-  // Generate possible keys from shift options
-  const generateKeys = (shiftOptions) => {
-    // Start with first letter options
-    let combinations = shiftOptions[0].map((shift) => [shift]);
-
-    // Add each subsequent letter's options
-    for (let i = 1; i < shiftOptions.length; i++) {
-      const newCombinations = [];
-      for (const combo of combinations) {
-        for (const shift of shiftOptions[i]) {
-          newCombinations.push([...combo, shift]);
+  // Terminate all workers
+  const terminateAllWorkers = () => {
+    if (workersRef.current.length > 0) {
+      workersRef.current.forEach((worker) => {
+        if (worker) {
+          worker.terminate();
         }
-      }
-      combinations = newCombinations;
-
-      // Limit number of combinations to prevent overload
-      if (combinations.length > 300) {
-        combinations = combinations.slice(0, 300);
-      }
-    }
-
-    // Convert shift arrays to key strings
-    return combinations.map((shifts) => shiftsToKey(shifts));
-  };
-
-  // New function to try brute force keys from VK.json
-  const tryBruteForceKeys = () => {
-    if (bruteForceKeys.length === 0) {
-      setResult("No brute force keys available.");
-      return null;
-    }
-
-    setResult(`Testing ${bruteForceKeys.length} predefined keys...`);
-
-    // Store results for each key
-    const results = [];
-
-    // Try each key
-    for (let i = 0; i < bruteForceKeys.length; i++) {
-      const testKey = bruteForceKeys[i];
-
-      // Skip empty or invalid keys
-      if (!testKey || testKey.length === 0) continue;
-
-      const decrypted = decryptWithKey(ciphertext, testKey);
-      const wordStats = countRecognizedWords(decrypted);
-
-      // Store result
-      results.push({
-        key: testKey,
-        wordStats,
-        decrypted,
       });
-
-      // Update progress periodically (every 20 keys or for the last key)
-      if (i % 20 === 0 || i === bruteForceKeys.length - 1) {
-        setResult(
-          `Tested ${i + 1}/${bruteForceKeys.length} keys. Best so far: ${
-            results.length > 0
-              ? `${
-                  results.sort(
-                    (a, b) => b.wordStats.percentage - a.wordStats.percentage
-                  )[0].key
-                } (${results[0].wordStats.percentage.toFixed(2)}%)`
-              : "None"
-          }`
-        );
-      }
-
-      // Early exit if we found a good match (over 80% word recognition)
-      if (wordStats.percentage >= 80) {
-        setResult(
-          `Found high-probability key: ${testKey} (${wordStats.percentage.toFixed(
-            2
-          )}%)`
-        );
-        return {
-          key: testKey,
-          wordStats,
-          decrypted,
-        };
-      }
+      workersRef.current = [];
     }
-
-    // Sort results by word recognition percentage
-    results.sort((a, b) => b.wordStats.percentage - a.wordStats.percentage);
-
-    // Return best match if it's reasonable (over 50% recognition)
-    if (results.length > 0 && results[0].wordStats.percentage > 50) {
-      return results[0];
-    }
-
-    return null; // No good matches found
   };
 
-  // Main function to decrypt or crack the cipher
-  const crackCipher = () => {
-    if (Object.keys(dictionary).length === 0) {
-      setResult("Dictionary is still loading. Please wait a moment.");
+  // Check if all workers have completed
+  const checkWorkersComplete = () => {
+    if (activeWorkersRef.current === 0) {
+      setIsLoading(false);
+      processAllResults();
+    }
+  };
+
+  // Storage for worker results
+  const bruteForceResultsRef = useRef([]);
+  const candidateResultsRef = useRef([]);
+  const refinementResultsRef = useRef({});
+
+  // Handle messages from workers
+  const handleWorkerMessage = (data, workerId) => {
+    if (isCancelledRef.current) return;
+
+    const { type, results, result } = data;
+
+    switch (type) {
+      case "bruteForceResult":
+        bruteForceResultsRef.current = [
+          ...bruteForceResultsRef.current,
+          ...results,
+        ];
+        setProgressPercentage((prev) =>
+          Math.min(95, prev + (100 / workerCount) * 0.9)
+        );
+        activeWorkersRef.current--;
+        checkWorkersComplete();
+        break;
+
+      case "candidatesResult":
+        candidateResultsRef.current = [
+          ...candidateResultsRef.current,
+          ...results,
+        ];
+        setProgressPercentage((prev) =>
+          Math.min(95, prev + (100 / workerCount) * 0.9)
+        );
+        activeWorkersRef.current--;
+        checkWorkersComplete();
+        break;
+
+      case "refineResult":
+        refinementResultsRef.current = result;
+        setProgressPercentage(100);
+        activeWorkersRef.current--;
+        checkWorkersComplete();
+        break;
+
+      default:
+        console.warn("Unknown message type:", type);
+        activeWorkersRef.current--;
+        checkWorkersComplete();
+    }
+  };
+
+  // Process all results from workers
+  const processAllResults = () => {
+    if (isCancelledRef.current) {
+      setResult("Operation cancelled.");
+      setProgressPercentage(0);
       return;
     }
 
+    if (useBruteForce && bruteForceResultsRef.current.length > 0) {
+      // Sort brute force results by word recognition percentage
+      const sortedResults = [...bruteForceResultsRef.current].sort(
+        (a, b) => b.wordStats.percentage - a.wordStats.percentage
+      );
+
+      // Take top 5 results
+      const topResults = sortedResults.slice(0, 5);
+      const bestResult = topResults[0];
+
+      setKey(bestResult.key);
+      setDecryptedText(bestResult.decrypted);
+
+      // Format results display
+      let resultText = "Top 5 potential keys:\n";
+      topResults.forEach((item, index) => {
+        resultText += `${index + 1}. Key: ${
+          item.key
+        } (${item.wordStats.percentage.toFixed(2)}% recognition)\n`;
+        if (index === 0) {
+          resultText += `   Decryption: ${item.decrypted.substring(0, 100)}${
+            item.decrypted.length > 100 ? "..." : ""
+          }\n\n`;
+        }
+      });
+
+      setResult(resultText);
+    } else if (candidateResultsRef.current.length > 0) {
+      // Sort candidate results by word recognition percentage
+      const sortedResults = [...candidateResultsRef.current].sort(
+        (a, b) => b.wordStats.percentage - a.wordStats.percentage
+      );
+
+      const bestResult = sortedResults[0];
+
+      setKey(bestResult.key);
+      setDecryptedText(bestResult.decrypted);
+
+      // Format results display
+      let resultText = `Key found: ${bestResult.key}\n`;
+      resultText += `Recognition rate: ${bestResult.wordStats.percentage.toFixed(
+        2
+      )}%\n`;
+      resultText += `Words recognized: ${bestResult.wordStats.count}/${bestResult.wordStats.total}\n`;
+      if (bestResult.refined) {
+        resultText += `Key was refined over ${bestResult.iterations} iterations\n`;
+      }
+      resultText += `\nDecryption preview:\n${bestResult.decrypted.substring(
+        0,
+        200
+      )}${bestResult.decrypted.length > 200 ? "..." : ""}`;
+
+      setResult(resultText);
+    } else if (Object.keys(refinementResultsRef.current).length > 0) {
+      const refinedResult = refinementResultsRef.current;
+
+      setKey(refinedResult.finalKey);
+      setDecryptedText(refinedResult.decrypted);
+
+      // Format results display
+      let resultText = `Refined key: ${refinedResult.finalKey}\n`;
+      resultText += `Recognition rate: ${refinedResult.wordStats.percentage.toFixed(
+        2
+      )}%\n`;
+      resultText += `Words recognized: ${refinedResult.wordStats.count}/${refinedResult.wordStats.total}\n`;
+      resultText += `Iterations: ${refinedResult.iterations}\n`;
+      resultText += `\nDecryption preview:\n${refinedResult.decrypted.substring(
+        0,
+        200
+      )}${refinedResult.decrypted.length > 200 ? "..." : ""}`;
+
+      setResult(resultText);
+    } else {
+      setResult(
+        "No viable solutions found. Try adjusting parameters or try a different ciphertext."
+      );
+    }
+
+    setProgressPercentage(0);
+  };
+
+  // Cancel ongoing operations
+  const handleCancel = () => {
+    isCancelledRef.current = true;
+    terminateAllWorkers();
+    setIsLoading(false);
+    setProgressPercentage(0);
+    setResult("Operation cancelled by user.");
+  };
+
+  // Start cryptanalysis process
+  const crackCipher = async () => {
+    if (!ciphertext.trim()) {
+      setResult("Please enter ciphertext to decrypt.");
+      return;
+    }
+
+    // Reset state
     setIsLoading(true);
+    setProgressPercentage(5);
     setResult("Analyzing ciphertext...");
+    isCancelledRef.current = false;
+    bruteForceResultsRef.current = [];
+    candidateResultsRef.current = [];
+    refinementResultsRef.current = {};
 
-    setTimeout(() => {
-      try {
-        // Remove non-letters for analysis
-        const filteredText = ciphertext.replace(/[^a-zA-Z]/g, "");
-        if (filteredText.length === 0) {
-          setIsLoading(false);
-          setResult("Please enter valid ciphertext with letters.");
-          return;
-        }
+    // Initialize workers
+    initializeWorkers();
 
-        // If user provided a key, just decrypt with it
-        if (useKey && key) {
-          const decrypted = decryptWithKey(ciphertext, key);
-          setDecryptedText(decrypted);
-          setResult(`Key: ${key}`);
-          setIsLoading(false);
-          return;
-        }
+    try {
+      // If using a known key
+      if (useKey && key.trim()) {
+        setProgressPercentage(10);
+        setResult("Decrypting with provided key...");
 
-        // Try brute force keys first if enabled
-        if (useBruteForce) {
-          const bruteForceResult = tryBruteForceKeys();
-
-          // If we found a good match with brute force, use it
-          if (bruteForceResult) {
-            setKey(bruteForceResult.key);
-            setDecryptedText(bruteForceResult.decrypted);
-
-            // If it's a very good match (over 80%), we're done
-            if (bruteForceResult.wordStats.percentage >= 80) {
-              setResult(
-                `Key found via brute force: ${
-                  bruteForceResult.key
-                } (Word recognition: ${bruteForceResult.wordStats.percentage.toFixed(
-                  2
-                )}%)`
-              );
-              setIsLoading(false);
-              return;
-            }
-
-            // Otherwise, continue with regular methods but keep this as a baseline
-            setResult(
-              `Potential key found via brute force: ${
-                bruteForceResult.key
-              } (${bruteForceResult.wordStats.percentage.toFixed(
-                2
-              )}%). Continuing analysis...`
-            );
-          } else {
-            setResult(
-              "No strong matches found in predefined keys. Continuing with analysis..."
-            );
-          }
-        }
-
-        // Step 1: Find most likely key lengths
-        const keyLengthScores = [];
-        const maxLength = Math.min(parseInt(maxKeyLength) || 10, 15);
-
-        for (let keyLength = 1; keyLength <= maxLength; keyLength++) {
-          const sequences = getSequences(filteredText, keyLength);
-          let totalIC = 0;
-
-          // Calculate average IC for this key length
-          sequences.forEach((seq) => {
-            totalIC += calculateIC(seq);
-          });
-
-          const avgIC = totalIC / sequences.length;
-          // Score based on how close IC is to English (0.067)
-          const score = 1 - Math.abs(avgIC - 0.067) * 10;
-
-          keyLengthScores.push({ keyLength, score });
-        }
-
-        // Sort by score (higher is better)
-        keyLengthScores.sort((a, b) => b.score - a.score);
-
-        // Try top 3 key lengths
-        const topKeyLengths = keyLengthScores
-          .slice(0, Math.min(3, keyLengthScores.length))
-          .map((item) => item.keyLength);
-
-        setResult(`Testing key lengths: ${topKeyLengths.join(", ")}...`);
-
-        // Step 2: Try each key length
-        const allResults = [];
-
-        for (const keyLength of topKeyLengths) {
-          // Split text into sequences
-          const sequences = getSequences(filteredText, keyLength);
-
-          // Find best shifts for each position in the key
-          const shiftOptions = sequences.map((seq) => findBestShifts(seq));
-
-          // Generate possible keys
-          const possibleKeys = generateKeys(shiftOptions);
-
-          // Test each key
-          for (const key of possibleKeys) {
-            const decrypted = decryptWithKey(ciphertext, key);
-            const wordStats = countRecognizedWords(decrypted);
-
-            // Keep keys that recognize at least some words
-            if (wordStats.percentage > 15) {
-              allResults.push({
-                key,
-                wordStats,
-                decrypted,
-              });
-            }
-          }
-        }
-
-        // Sort by word recognition
-        allResults.sort(
-          (a, b) => b.wordStats.percentage - a.wordStats.percentage
+        // Decrypt with the provided key
+        const decrypted = VigenereLogic.decryptWithKey(ciphertext, key);
+        const wordStats = VigenereLogic.countRecognizedWords(
+          decrypted,
+          dictionary
         );
 
-        // Take up to 15 best results
-        const topResults = allResults.slice(0, Math.min(15, allResults.length));
+        setDecryptedText(decrypted);
+        setResult(
+          `Decryption with key "${key}":\nRecognition rate: ${wordStats.percentage.toFixed(
+            2
+          )}%\nWords recognized: ${wordStats.count}/${wordStats.total}`
+        );
+        setProgressPercentage(0);
+        setIsLoading(false);
 
-        if (topResults.length > 0) {
-          let bestResult = {
-            key: "",
-            decrypted: "",
-            wordStats: { percentage: 0 },
-          };
-
-          // Process each candidate
-          for (let i = 0; i < topResults.length; i++) {
-            const candidate = topResults[i];
-            setResult(
-              `Testing key candidate ${i + 1}/${topResults.length}: ${
-                candidate.key
-              } (${candidate.wordStats.percentage.toFixed(2)}%)`
-            );
-
-            // Skip refinement if already high recognition
-            if (candidate.wordStats.percentage >= targetRecognition) {
-              bestResult = {
-                key: candidate.key,
-                decrypted: candidate.decrypted,
-                wordStats: candidate.wordStats,
-              };
-              break;
-            }
-
-            // Try to improve this key
-            const { finalKey, decrypted, wordStats } = refineKey(
-              candidate.key,
-              targetRecognition,
-              maxIterations
-            );
-
-            // Keep track of best result
-            if (wordStats.percentage > bestResult.wordStats.percentage) {
-              bestResult = {
-                key: finalKey,
-                decrypted,
-                wordStats,
-              };
-
-              // Stop if we've reached target
-              if (wordStats.percentage >= targetRecognition) {
-                break;
-              }
-            }
-          }
-
-          // Set final results
-          setKey(bestResult.key);
-          setDecryptedText(bestResult.decrypted);
-          setResult(
-            `Key: ${
-              bestResult.key
-            } (Word recognition: ${bestResult.wordStats.percentage.toFixed(
+        // Optionally refine the key if recognition is low
+        if (wordStats.percentage < 70) {
+          const shouldRefine = window.confirm(
+            `Word recognition is low (${wordStats.percentage.toFixed(
               2
-            )}%)`
+            )}%). Would you like to try refining the key?`
           );
-        } else {
-          setResult(
-            "No viable keys found. Try adjusting parameters or providing more ciphertext."
-          );
+
+          if (shouldRefine) {
+            refineExistingKey(key);
+          }
         }
 
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error:", error);
-        setIsLoading(false);
-        setResult(`Error: ${error.message}`);
+        return;
       }
-    }, 100);
+
+      // If using brute force with known keys
+      if (useBruteForce && bruteForceKeys.length > 0) {
+        setProgressPercentage(10);
+        setResult("Trying known keys (brute force approach)...");
+
+        // Split keys among workers
+        const keysPerWorker = Math.ceil(bruteForceKeys.length / workerCount);
+        activeWorkersRef.current = workerCount;
+
+        for (let i = 0; i < workerCount; i++) {
+          const startIdx = i * keysPerWorker;
+          const endIdx = Math.min(
+            startIdx + keysPerWorker,
+            bruteForceKeys.length
+          );
+          const workerKeys = bruteForceKeys.slice(startIdx, endIdx);
+
+          if (workerKeys.length === 0) {
+            activeWorkersRef.current--;
+            continue;
+          }
+
+          workersRef.current[i].postMessage({
+            type: "processBruteForce",
+            data: {
+              keys: workerKeys,
+              bruteForceText: ciphertext,
+              bruteForceDict: dictionary,
+            },
+          });
+        }
+
+        return;
+      }
+
+      // Cryptanalysis approach using Index of Coincidence
+      setProgressPercentage(15);
+      setResult("Analyzing possible key lengths using Index of Coincidence...");
+
+      // Clean the ciphertext
+      const cleanText = ciphertext.toUpperCase().replace(/[^A-Z]/g, "");
+
+      // Find possible key lengths using IC analysis
+      const keyLengthScores = [];
+      for (let length = 1; length <= maxKeyLength; length++) {
+        const sequences = VigenereLogic.getSequences(cleanText, length);
+        let totalIC = 0;
+
+        for (const seq of sequences) {
+          totalIC += VigenereLogic.calculateIC(seq);
+        }
+
+        const avgIC = totalIC / length;
+        keyLengthScores.push({ length, ic: avgIC });
+      }
+
+      // Sort by descending IC value (higher is better)
+      keyLengthScores.sort((a, b) => b.ic - a.ic);
+
+      // Take top 3 possible key lengths
+      const topKeyLengths = keyLengthScores.slice(0, 3);
+
+      setProgressPercentage(25);
+      setResult(
+        `Analyzing possible keys for lengths: ${topKeyLengths
+          .map((k) => `${k.length} (IC: ${k.ic.toFixed(4)})`)
+          .join(", ")}`
+      );
+
+      // Generate key candidates for each length
+      const allCandidates = [];
+
+      for (const keyLengthObj of topKeyLengths) {
+        const keyLength = keyLengthObj.length;
+        const sequences = VigenereLogic.getSequences(cleanText, keyLength);
+        const shiftOptions = sequences.map((seq) =>
+          VigenereLogic.findBestShifts(seq, 3)
+        );
+
+        // Generate keys from shift combinations
+        const keyCandidates = VigenereLogic.generateKeys(shiftOptions);
+        allCandidates.push(...keyCandidates);
+      }
+
+      setProgressPercentage(40);
+      setResult(`Testing ${allCandidates.length} potential keys...`);
+
+      // Distribute candidates among workers
+      const candidatesPerWorker = Math.ceil(allCandidates.length / workerCount);
+      activeWorkersRef.current = workerCount;
+
+      for (let i = 0; i < workerCount; i++) {
+        const startIdx = i * candidatesPerWorker;
+        const endIdx = Math.min(
+          startIdx + candidatesPerWorker,
+          allCandidates.length
+        );
+        const workerCandidates = allCandidates.slice(startIdx, endIdx);
+
+        if (workerCandidates.length === 0) {
+          activeWorkersRef.current--;
+          continue;
+        }
+
+        workersRef.current[i].postMessage({
+          type: "processCandidates",
+          data: {
+            candidates: workerCandidates,
+            ciphertext: ciphertext,
+            dictionary: dictionary,
+            targetPercentage: targetRecognition,
+            maxIterations: maxIterations,
+          },
+        });
+      }
+    } catch (error) {
+      setIsLoading(false);
+      setProgressPercentage(0);
+      setResult(`Error during cryptanalysis: ${error.message}`);
+      console.error("Cryptanalysis error:", error);
+    }
+  };
+
+  // Refine an existing key
+  const refineExistingKey = (keyToRefine) => {
+    setIsLoading(true);
+    setProgressPercentage(10);
+    setResult(`Refining key "${keyToRefine}"...`);
+    isCancelledRef.current = false;
+
+    // Initialize workers
+    initializeWorkers();
+
+    // Use just one worker for refinement
+    activeWorkersRef.current = 1;
+
+    workersRef.current[0].postMessage({
+      type: "refineKey",
+      data: {
+        key: keyToRefine,
+        refineText: ciphertext,
+        refineDict: dictionary,
+        refineTarget: targetRecognition,
+        refineMaxIter: 100, // Use more iterations for refinement
+      },
+    });
   };
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Vigenère Cipher Cracker</h1>
-
       <div className="mb-4">
         <label className="block mb-2">Ciphertext:</label>
         <textarea
@@ -649,9 +472,9 @@ export default function VCracker() {
           onChange={(e) => setCiphertext(e.target.value)}
           className="w-full h-32 p-2 border border-gray-300 rounded"
           placeholder="Enter ciphertext here..."
+          disabled={isLoading}
         />
       </div>
-
       <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex-1">
           <label className="block mb-2">
@@ -663,7 +486,6 @@ export default function VCracker() {
             />
             Use a specific key
           </label>
-
           {useKey && (
             <input
               type="text"
@@ -671,10 +493,10 @@ export default function VCracker() {
               onChange={(e) => setKey(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded"
               placeholder="Enter key (e.g., VIGENERE)"
+              disabled={isLoading}
             />
           )}
         </div>
-
         <div className="flex-1">
           <label className="block mb-2">
             <input
@@ -682,6 +504,7 @@ export default function VCracker() {
               checked={useBruteForce}
               onChange={(e) => setUseBruteForce(e.target.checked)}
               className="mr-2"
+              disabled={useKey || isLoading}
             />
             Try brute force keys first
           </label>
@@ -691,44 +514,43 @@ export default function VCracker() {
             </div>
           )}
         </div>
-
         <div className="flex-1">
           <label className="block mb-2">Maximum key length:</label>
           <input
             type="number"
             value={maxKeyLength}
-            onChange={(e) => setMaxKeyLength(e.target.value)}
+            onChange={(e) => setMaxKeyLength(parseInt(e.target.value))}
             className="w-full p-2 border border-gray-300 rounded"
             min="1"
             max="15"
+            disabled={isLoading || useBruteForce || useKey}
           />
         </div>
-
         <div className="flex-1">
           <label className="block mb-2">Target word recognition (%):</label>
           <input
             type="number"
             value={targetRecognition}
-            onChange={(e) => setTargetRecognition(e.target.value)}
+            onChange={(e) => setTargetRecognition(parseInt(e.target.value))}
             className="w-full p-2 border border-gray-300 rounded"
             min="50"
             max="100"
+            disabled={isLoading}
           />
         </div>
-
         <div className="flex-1">
           <label className="block mb-2">Maximum iterations:</label>
           <input
             type="number"
             value={maxIterations}
-            onChange={(e) => setMaxIterations(e.target.value)}
+            onChange={(e) => setMaxIterations(parseInt(e.target.value))}
             className="w-full p-2 border border-gray-300 rounded"
             min="5"
             max="50"
+            disabled={isLoading}
           />
         </div>
       </div>
-
       <div className="flex gap-4 mb-4">
         <button
           onClick={crackCipher}
@@ -741,10 +563,26 @@ export default function VCracker() {
             ? "Try Keys & Crack Cipher"
             : "Crack Cipher"}
         </button>
-
-        {isLoading && <div className="my-auto">Processing...</div>}
+        {isLoading && (
+          <>
+            <button
+              onClick={handleCancel}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Cancel
+            </button>
+            <div className="flex-1 my-auto relative h-6 bg-gray-200 rounded">
+              <div
+                className="absolute top-0 left-0 h-full bg-blue-500 rounded"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+              <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center text-xs">
+                {progressPercentage}%
+              </div>
+            </div>
+          </>
+        )}
       </div>
-
       {decryptedText && (
         <div className="mb-4">
           <label className="block mb-2">Decrypted Text:</label>
@@ -753,9 +591,8 @@ export default function VCracker() {
           </div>
         </div>
       )}
-
       <div className="mb-4">
-        <label className="block mb-2">Key:</label>
+        <label className="block mb-2">Analysis Results:</label>
         <pre className="w-full p-3 border border-gray-300 rounded overflow-auto whitespace-pre-wrap bg-gray-50">
           {result}
         </pre>
