@@ -36,8 +36,8 @@ Key Refinement </br>
     🔵 Blue Areas → High accuracy (easy to decrypt cases).
 
     ⚪ White Areas → Transition zones.
-![Figure_1](https://github.com/user-attachments/assets/4704865c-9671-4dbb-8c3f-dfacef98f331)
 
+![Figure_1](https://github.com/user-attachments/assets/253a9a9f-8846-4d38-9059-9230d2cc361a)
 
  </br> </br> </br>
 Install : </br>
