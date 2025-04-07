@@ -546,7 +546,7 @@ export default function VCracker() {
             onChange={(e) => setMaxIterations(parseInt(e.target.value))}
             className="w-full p-2 border border-gray-300 rounded"
             min="5"
-            max="50"
+            max="5000"
             disabled={isLoading}
           />
         </div>
